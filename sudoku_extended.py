@@ -65,7 +65,7 @@ if __name__ == '__main__':
 
         def generate_notes(self):
             print("generate notes")
-            for value in range (1,9):
+            for value in range (1,10):
                 for col in range(self._size):
                       for row in range(self._size):
                           if self[row][col].get()== 0:
