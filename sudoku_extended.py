@@ -26,14 +26,10 @@ if __name__ == '__main__':
         def writeundolist(self,x,y,value):
             max_lenght = 6
             self.undolist.append([x,y,int(value)])
-            #self.undolist.append([x,y,int(value)])
-            print("undolist = ", self.undolist)
             
         def writeredolist(self,x,y,value):
             max_lenght = 6
             self.redolist.append([x,y,int(value)])
-            #self.undolist.append([x,y,int(value)])
-            print("redolist = ", self.redolist)
 
         def undo(self, count = 1):
             count = int(count)
@@ -41,6 +37,7 @@ if __name__ == '__main__':
                 count = len(self.undolist)
             if count == 0:
                 print("Undo-Liste ist leer!")
+                getch()
             for i in range(count):
                 temp = self.undolist.pop()
                 #write redo-entry
@@ -55,9 +52,13 @@ if __name__ == '__main__':
                 count = len(self.redolist)
             if count == 0:
                 print("Redo-Liste ist leer!")
+                getch()
             for i in range(count):
-                print("redolist = ", self.redolist)
                 temp = self.redolist.pop()
+                #possibility to undo redo-moves:
+                redo = self[temp[0]][temp[1]].get()
+                self.writeundolist(temp[0],temp[1],redo)
+                #redo move
                 self[temp[0]][temp[1]].set(temp[2])
            
 
@@ -167,24 +168,30 @@ if __name__ == '__main__':
             if count not in range(1,10):
                 print("Bitte nach next Integerzahl (1-9) eingeben!")
                 return
-            found = False
             counterx = 0
+            #generate notes
             self.printflag = False
             self.generate_notes()
             self.printflag = True
+            #solve each 1-number-choice fields
+            #on the board by putting in the correct number
             while (self.set_one()):
                 counterx += 1
                 print("Durchlauf ", counterx)
                 if counterx == count:
                     break
+                #generate new notes after setting a number
                 self.printflag = False
                 self.generate_notes()
                 self.printflag = True
+            #if not as many 1-number-choices on the board
+            #as set in the note command check for win
             if counterx < int(count):
                 if self.check_for_win():
                     print("\nSudoku gelöst!")
                 else:
                     print("Konnte nicht alle Werte setzen!")
+            #all numbers cut be set...
             else:
                 if self.check_for_win():
                     print("\nSudoku gelöst!")
