@@ -1,4 +1,5 @@
 if __name__ == '__main__':
+    import collections
     from util.getch import getch
     from sudoku_win7 import Sudoku
     
@@ -17,6 +18,48 @@ if __name__ == '__main__':
         rowverbal = ["A","B","C","D","E","F","G","H","I"]
         printflag = True
         counter = 0
+        #undolist = []
+        max_length = 6
+        undolist=collections.deque([],max_length)
+        redolist=collections.deque([],max_length)
+
+        def writeundolist(self,x,y,value):
+            max_lenght = 6
+            self.undolist.append([x,y,int(value)])
+            #self.undolist.append([x,y,int(value)])
+            print("undolist = ", self.undolist)
+            
+        def writeredolist(self,x,y,value):
+            max_lenght = 6
+            self.redolist.append([x,y,int(value)])
+            #self.undolist.append([x,y,int(value)])
+            print("redolist = ", self.redolist)
+
+        def undo(self, count = 1):
+            count = int(count)
+            if count > len(self.undolist):
+                count = len(self.undolist)
+            if count == 0:
+                print("Undo-Liste ist leer!")
+            for i in range(count):
+                temp = self.undolist.pop()
+                #write redo-entry
+                redo = self[temp[0]][temp[1]].get()
+                self.writeredolist(temp[0],temp[1],redo)
+                #undo command
+                self[temp[0]][temp[1]].set(temp[2])
+
+        def redo(self, count = 1):
+            count = int(count)
+            if count > len(self.redolist):
+                count = len(self.redolist)
+            if count == 0:
+                print("Redo-Liste ist leer!")
+            for i in range(count):
+                print("redolist = ", self.redolist)
+                temp = self.redolist.pop()
+                self[temp[0]][temp[1]].set(temp[2])
+           
 
         #called with command "fix b1 5" e.g.
         def fix_field(self, row:str, col:str, value:int):            
@@ -39,6 +82,10 @@ if __name__ == '__main__':
                 return None
             value = int(value)
             row, col = self._mapper(row, col)
+            #write undo-entry
+            value_prev = self[row][col].get()
+            self.writeundolist(row,col,value_prev)
+            #set new value
             self[row][col].set(value)
             if self.is_valid_row(row) or self.is_valid_col(col) or self.is_valid_submarix(row, col):
                 return "Conflited value {0}!\n".format(value)        
@@ -134,9 +181,15 @@ if __name__ == '__main__':
                 self.generate_notes()
                 self.printflag = True
             if counterx < int(count):
-                print("Konnte nicht alle Werte setzen!")
+                if self.check_for_win():
+                    print("\nSudoku gelöst!")
+                else:
+                    print("Konnte nicht alle Werte setzen!")
             else:
-                print("Alle Werte gesetzt!")
+                if self.check_for_win():
+                    print("\nSudoku gelöst!")
+                else:
+                    print("Alle Werte gesetzt!")
             getch()
             
         #Called by solve. Sets only one value because
@@ -205,6 +258,18 @@ if __name__ == '__main__':
             print("4/5/6/7 mittel")
             print("8/9/10 einfach")
             getch()
+
+        def check_for_win(self):
+            emptyfields = 0
+            for col in range(self._size):
+                for row in range(self._size):
+                    if self[row][col].get()== 0:
+                        emptyfields +=1
+            fields = 81-emptyfields
+            if fields == 81:
+                return True
+            else:
+                return False
 
     #Hier wird das Objekt der neuen Item-Klasse dem Konstuktor
     #__init__(Grid.Item) übergeben und der mainloop gestartet
