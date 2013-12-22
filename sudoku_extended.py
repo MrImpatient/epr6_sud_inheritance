@@ -1,37 +1,62 @@
+__author__ = "1224270: Frank Kramer, 3402993: Sascha Reynolds"
+__version__ = "1.0"
+__email__ = "frkramer@stud.uni-frankfurt.de, sreynold@stud.uni-frankfurt.de"
+
 if __name__ == '__main__':
     import collections
     from util.getch import getch
     from sudoku_win7 import Sudoku
+    from sudoku_win7 import Grid
     
-    #new item class
-    class Item(Sudoku.Item):
+  
+    class Item2(Grid.Item):
+        """Item2 class which inherits from Grid.Item.
+        (alternatively could also have been inherited from
+        Sudoku.Item, but we think this is better to understand)
+        Adds the attributes "fixit" and "note" and the
+        function getnote and setnote. During game item-objecs are
+        created for each sudoku field. Therfore each field
+        has the attributes fixit and note. If fixit is True
+        the field is "fixed" which means that if cannot be
+        deleted any more. Note is initialized with an empty string.
+        The user can add notes to the field (setnote) or
+        view the notes (getnote). 
+        """
         fixit = False
         note = ""
         def getnote(self):
-            print(self.note)
+            if self.note == "":
+                print("Keine Notiz vorhanden!")
+            else:
+                print(self.note)
             getch()
         def setnote(self,s:str):
             self.note += s
         
     #new class Sudoku2
-    class Sudoku2(Sudoku, Item):
-        rowverbal = ["A","B","C","D","E","F","G","H","I"]
-        printflag = True
-        counter = 0
-        #undolist = []
-        max_length = 6
-        undolist=collections.deque([],max_length)
-        redolist=collections.deque([],max_length)
+    class Sudoku2(Sudoku):
+        """Class Sudoku2 inherits from Sudoku. It implements
+        the attributes and methods for the follwing commands
+        (in the listed order): undo, redo, fix, set (changes due to fix
+        and undo), remove (changes due to fix), get_note, set_note,
+        generate_notes, get_free, set_one, level, check_for_win"""
+        rowverbal = ["A","B","C","D","E","F","G","H","I"] #used by get_free
+        printflag = True #print or don't print a message when using generate_notes
+        max_length = 6 #maximum length of undo/redo list (using collections.deque)
+        undolist=collections.deque([],max_length) #undolist using collections.deque
+        redolist=collections.deque([],max_length) #redolist using collections.deque
 
         def writeundolist(self,x,y,value):
-            max_lenght = 6
             self.undolist.append([x,y,int(value)])
             
         def writeredolist(self,x,y,value):
-            max_lenght = 6
             self.redolist.append([x,y,int(value)])
 
         def undo(self, count = 1):
+            """invoked if the user enters undo or undo [1-6] in the
+            commandline. count gives number of undo steps. Only
+            values which were added to the board with method set are
+            put into the undo-list"""
             count = int(count)
             if count > len(self.undolist):
                 count = len(self.undolist)
@@ -40,13 +65,17 @@ if __name__ == '__main__':
                 getch()
             for i in range(count):
                 temp = self.undolist.pop()
-                #write redo-entry
+                #write redo-entry, so to be able to redo an undo command:
                 redo = self[temp[0]][temp[1]].get()
                 self.writeredolist(temp[0],temp[1],redo)
-                #undo command
+                #undo last command:
                 self[temp[0]][temp[1]].set(temp[2])
 
         def redo(self, count = 1):
+            """invoked if the user enters redo or redo [1-6] in the
+            commandline. count gives number of redo steps. Only
+            values which were removed from the board with method undo are
+            put into the redo-list""" 
             count = int(count)
             if count > len(self.redolist):
                 count = len(self.redolist)
@@ -61,9 +90,11 @@ if __name__ == '__main__':
                 #redo move
                 self[temp[0]][temp[1]].set(temp[2])
            
-
-        #called with command "fix b1 5" e.g.
-        def fix_field(self, row:str, col:str, value:int):            
+        def fix_field(self, row:str, col:str, value:int):
+            """invoked if the user enters fix [field] [value]
+            into the command line. Sadly no fix [field] alone 
+            can be entered, as the second argument is required
+            by the original implementation..."""
             self.grid = self.get(row, col)
             if not self.grid.fixit:
                 self.set(row, col, value)
@@ -74,26 +105,35 @@ if __name__ == '__main__':
                 print("Feld schon fixiert!")
                 getch()
 
-        #called with command "set b1 5" e.g.
         def set(self, row:str, col:str, value:int) -> None:
+            """overridden method which was already implemented
+            in the original code. Overriding was necessary to
+            take care of the commands fix and undo. invoked
+            if the user enters set [field] [value] into the
+            command line."""
             self.grid = self.get(row, col)
+            #if field is fixed, do nothing:
             if self.grid.fixit == True:
                 print("Feld fixiert, keine Änderung möglich!")
                 getch()
                 return None
             value = int(value)
-            row, col = self._mapper(row, col)
-            #write undo-entry
-            value_prev = self[row][col].get()
-            self.writeundolist(row,col,value_prev)
-            #set new value
+            row, col = self._mapper(row, col) #convert coordinates
+            value_prev = self[row][col].get() #get value bevore it is overwritten
+            self.writeundolist(row,col,value_prev)#write previous value into undolist
+            #write new value into board:
             self[row][col].set(value)
+            #check if move is legal. 
             if self.is_valid_row(row) or self.is_valid_col(col) or self.is_valid_submarix(row, col):
-                return "Conflited value {0}!\n".format(value)        
+                #if move is illegal write message to warn user
+                return "Wert nicht legal, undo benutzen!\n".format(value)        
             return None
 
-        #called with command "del b1" e. g.
         def remove(self, row:str, col:str) -> None:
+            """overridden method which was already implemented
+            in the original code. Overriding was necessary to
+            take care of the command fix. invoked if the user
+            enters del [field] into the command line"""
             self.grid = self.get(row, col)
             if self.grid.fixit == True:
                 print("Feld fixiert, keine Änderung möglich!")
@@ -102,25 +142,33 @@ if __name__ == '__main__':
             row, col = self._mapper(row, col)
             self[row][col] = self.get_empty()
         
-        #Called with command "note b1" e.g.
         def get_note(self, row:str, col:str):
+            """Reads the note attached to a field which is
+            set either by user or by generate_notes. Invoked
+            if the user enters note [field] in the
+            commandline"""
             self.grid = self.get(row, col)
             self.grid.getnote()
             
-        #Called with command "note b1 157" e.g.
         def set_note(self, row:str, col:str, hint:str):
+            """Adds a note to a certain field. Invoked
+            if the user enters note [field] [string]
+            in the commandline"""
             self.grid = self.get(row, col)
             self.grid.setnote(hint)
             print("Notiz gesetzt!")
             getch()
         
-        #Called with command "notes"
-        #Generates a note for each free field which
-        #contains the numbers this field can legally
-        #take
         def generate_notes(self):
-            #Display this remark only if this function
-            #is directly called with "notes". 
+            """Called if the user enters "notes"
+            into the commandline. Generates a note for each
+            free field. Note contains the numbers this field
+            can legally take. If a user defined note exists
+            it will be overridden. This is necessary because
+            the automatically generated notes are used by other
+            methods (solve, get_free)."""
+            #Display the remark "Lege Notizen an..." only if
+            #this function is directly called by entering "notes". 
             if self.printflag:
                 print("Lege Notizen an...")
             #deleting old notes
@@ -140,10 +188,12 @@ if __name__ == '__main__':
                                  self[row][col].note += str(value)
                                  self[row][col].set(0)
 
-        #Called with command "hint"
-        #Displays all free fields which can
-        #take only one single number
+        
         def get_free(self):
+            """Called if the user enters "hint" in
+            the commandline. Displays a list of all free
+            fields which can take only one single number
+            """
             self.printflag = False
             self.generate_notes()
             self.printflag = True
@@ -158,9 +208,13 @@ if __name__ == '__main__':
             if foundone == False:
                 print("Kein Feld mit nur einem Hint gefunden!")
             getch()
-
-        #Called with command "next" or "next [1-9]"
+        
         def solve(self, count = 1):
+            """
+            Called if the user enters "next" or "next [1-9]"
+            into the commandline. Fills free fields which can take
+            only one number with this number. 
+            """
             try:
                 count = int(count)
             except:
@@ -170,12 +224,12 @@ if __name__ == '__main__':
                 return
             counterx = 0
             #generate notes
-            self.printflag = False
+            self.printflag = False #notes should print no message here
             self.generate_notes()
             self.printflag = True
             #solve each 1-number-choice fields
             #on the board by putting in the correct number
-            while (self.set_one()):
+            while (self.set_one()): #sets one number
                 counterx += 1
                 print("Durchlauf ", counterx)
                 if counterx == count:
@@ -199,9 +253,10 @@ if __name__ == '__main__':
                     print("Alle Werte gesetzt!")
             getch()
             
-        #Called by solve. Sets only one value because
-        #after setting new notes have to be generated
         def set_one(self):
+            """Called by solve. Sets only one value because
+            after setting this value new notes have to
+            be generated"""
             for col in range(self._size):
                 for row in range(self._size):
                     if self[row][col].get()== 0:
@@ -212,6 +267,13 @@ if __name__ == '__main__':
                             return 1
 
         def level(self):
+            """Calculates a difficulty level for a sudoku.
+            This difficulty level is based on the number
+            of values which can theoretically be entered into
+            each free field. A Sudoku is considered most
+            difficult if 81*9 values are possible and
+            most easy if 0 values are possible, e. g. if
+            the Sudoku is solved ;)"""
             cl = [0]*9
             emptyfields = 0
             #Calculate notes
@@ -241,21 +303,12 @@ if __name__ == '__main__':
                             cl[7] += 1
                         if len(self[row][col].note) == 9:
                             cl[8] += 1
-            #calculating set fields 
-            fields = 81-emptyfields
-            if fields == 81:
-                print("Sudoku gelöst!")
-                getch()
-                return
-            #1er-choices count as filled fields
-            givenfields = fields + cl[0]
-            fieldindex = -1*givenfields/81 + 1 #range 1 to 0 (= solved)
+          
             weightedchoices= cl[1]*2+cl[2]*3+cl[3]*4+cl[4]*5+cl[5]*6+cl[5]*6+cl[6]*7+cl[7]*8+cl[8]*9
             choicesindex = weightedchoices/(81*9) #== 1 if all fields 9er-choices, 0 if S. solved
 
-            #temp = (fieldindex + choicesindex)/2
             temp = choicesindex
-
+            
             levelvalue = 10 - (10 * temp)
 
             levelvalue = round(levelvalue, 2)
@@ -277,9 +330,10 @@ if __name__ == '__main__':
                 return True
             else:
                 return False
+            
+    #Necessary to insure correct pickling of .lev-files
+    class Item(Item2):
+        pass
 
-    #Hier wird das Objekt der neuen Item-Klasse dem Konstuktor
-    #__init__(Grid.Item) übergeben und der mainloop gestartet
-    #Letzterer Konstruktor übergibt das Item-Objekt an den Grid
-    #Konstruktor
+    
     Sudoku2(Item).mainloop()
